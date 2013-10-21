@@ -140,24 +140,14 @@
     }
     
     google.maps.event.addListener(drawingManager, 'markercomplete', function(marker){
-        console.log("I AM DROPPED");
-    
-        if (markers[0] && markers[1]){
-            m1 = markers[0].getPosition();
-            m2 = markers[1].getPosition();
-            m3 = marker.getPosition();
-    
-            dist = _calculatecrosstrack(m1.lat(), m2.lat(), m1.lng(), m2.lng(), m3.lat(), m3.lng());
-             console.log("DISTANCE is " + dist); 
-            marker.setIcon({path: google.maps.SymbolPath.CIRCLE,   strokeColor: getColourTemp(0.05, 0.0, dist) ,
-            scale: 5});
-           
-        }
-        
+        console.log("I AM DROPPED");    
         markers.push(marker);
     
         if (polys[0]){
-             calculateshortestpath();
+            dist = calculateshortestpath(marker);
+            console.log("DISTANCE is " + dist); 
+            marker.setIcon({path: google.maps.SymbolPath.CIRCLE,   strokeColor: getColourTemp(0.05, 0.0, dist) ,
+            scale: 5});
         }else{
             console.log("no calculation!");
         }
@@ -169,16 +159,13 @@
         polygon.setEditable(true);
         
         if (markers[0]){
-            console.log("Shortest distance is " + calculateshortestpath());
+            console.log("Shortest distance is " + calculateshortestpath(markers[0]));
         }else{
             console.log("no calculation!");
         }
     });
     
-    function calculateshortestpath(){
-       
-        
-        
+    function calculateshortestpath(marker){
         var polygonBounds = polys[0].getPath();
         var firstcoord;
         var min  = Number.MAX_VALUE;
@@ -189,7 +176,7 @@
                 firstcoord = xy;
             }
             if (i > 0){
-                mpos = markers[0].getPosition();
+                mpos = marker.getPosition();
                 ct = _calculatecrosstrack(lastcoord.lat(), xy.lat(), lastcoord.lng(), xy.lng(), mpos.lat(), mpos.lng());
                 min = Math.min(min, ct);
             }
@@ -199,6 +186,7 @@
         
          ct = _calculatecrosstrack(lastcoord.lat(), firstcoord.lat(), lastcoord.lng(), firstcoord.lng(), mpos.lat(), mpos.lng());
          min = Math.min(min, ct);
+         console.log("distance is " + min);
          return min;
     }
     
