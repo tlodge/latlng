@@ -5,7 +5,7 @@
      <script type="text/javascript"
       src="https://maps.googleapis.com/maps/api/js?libraries=drawing&key=AIzaSyCIwTY8WHSNHiwjFsoxA0v4gTKolhyFGb8&sensor=false">
     </script>
-
+<script type="text/javascript" src="jquery.min.js"></script>
 <script type="text/javascript">
   var poly, map;
   var markers = [];
@@ -13,18 +13,19 @@
   var polys = [];
   
   function initialize() {
-    var wb = new google.maps.LatLng(52.923023, -1.12133);
+    var wb = new google.maps.LatLng(52.947217, -1.082561);
     
-    map = new google.maps.Map(document.getElementById("map"), {
+    map = new google.maps.Map(document.getElementById("mapcanvas"), {
       zoom: 14,
       center: wb,
       mapTypeId: google.maps.MapTypeId.ROADMAP
     });
     
-    
+
     var drawingManager = new google.maps.drawing.DrawingManager({
       drawingMode: google.maps.drawing.OverlayType.MARKER,
       drawingControl: true,
+      
       drawingControlOptions: {
         position: google.maps.ControlPosition.TOP_CENTER,
         drawingModes: [
@@ -36,7 +37,7 @@
         ]
       },
       markerOptions: {
-        
+          draggable:true
       },
       circleOptions: {
         fillColor: '#ffff00',
@@ -48,7 +49,49 @@
       }
     });
 
+    $('#mapcanvas').mousemove(function(evt){
+        var posx = evt.pageX-this.offsetLeft;
+        var posy = evt.pageY-this.offsetTop;
+        m3 = getLatLngByOffset(map,posx,posy)
+        $('#lblCurrentPos').html( getLocationText(m3));
+        
+        if (markers[0] && markers[1]){
+            m1 = markers[0].getPosition();
+            m2 = markers[1].getPosition();
+            //console.log(_calculatecrosstrack(m1.lat(), m2.lat(), m1.lng(), m2.lng(), m3.lat(), m3.lng()));
+            //dist = _calculatedistance(m1.lat(), m2.lat(), m1.lng(), m2.lng());
+            //bearing = _calculatebearing(m1.lat(), m2.lat(), m1.lng(), m2.lng());
+            //console.log(dist + " " + bearing + " " + degrees(bearing));
+            //$('#markerDistance').html( dist);
+        }
+    });
+    
 
+    function trunc(x) {
+        return Math.round(x * 1000) / 1000;
+    }
+
+    function getLocationText(location) {
+        if (markers[0] && markers[1]){
+            m1 = markers[0].getPosition();
+            m2 = markers[1].getPosition();
+            
+            
+            return '[ MARKER 1 ' + m1.lat() + " " + m1.lng() + "] [ MARKER 2 " + m2.lat() + " " + m2.lng() + "] " +  '[' + location.lat() + ',' + location.lng() + ']';
+        }
+        return '[' + trunc(location.lng()) + ',' + trunc(location.lat()) + ']';
+    }
+    
+    function getLatLngByOffset( map, offsetX, offsetY ){
+        var currentBounds = map.getBounds();
+        var topLeftLatLng = new google.maps.LatLng( currentBounds.getNorthEast().lat(),
+                                                    currentBounds.getSouthWest().lng());
+        var point = map.getProjection().fromLatLngToPoint( topLeftLatLng );
+        point.x += offsetX / ( 1<<map.getZoom() );
+        point.y += offsetY / ( 1<<map.getZoom() );
+        return map.getProjection().fromPointToLatLng( point );
+    }
+    
     google.maps.event.addListener(drawingManager, 'polylinecomplete', function(polyline){
         if (markers[0]){
             mpos = markers[0].getPosition();
@@ -56,28 +99,68 @@
             lat2 = polyline.getPath().getAt(1).lat();
             lng1 = polyline.getPath().getAt(0).lng();
             lng2 = polyline.getPath().getAt(1).lng();
-            console.log(_calculatedistance(lat1, mpos.lat(), lng1, mpos.lng()));
-            console.log(_calculatedistance(lat2, mpos.lat(), lng2, mpos.lng()));
+            console.log(_calculatedistance(lat1, mpos.lat(), lng1, mpos.lng()) + "=>" + _calculatedistance(lat2, mpos.lat(), lng2, mpos.lng()));
             console.log(_calculatecrosstrack(lat1, lat2, lng1, lng2, mpos.lat(), mpos.lng()));
         }
     });
     
+    
+        function componentToHex(c) {
+        var hex = c.toString(16);
+        return hex.length == 1 ? "0" + hex : hex;
+    }
+
+    function rgbToHex(r, g, b) {
+        console.log( "#" + componentToHex(r) + componentToHex(g) + componentToHex(b));
+        return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+    }
+
+    function getColourTemp(maxVal, minVal, actual) {
+        
+        console.log("max is " + maxVal + " min is " + minVal + " actual is " + actual);
+        
+        if (actual > maxVal)
+            return rgbToHex(255, 0, 0);
+            
+        var midVal = (maxVal - minVal)/2;
+        var intR;
+        var intG;
+        var intB = Math.round(0);
+
+        if (actual >= midVal){
+             intR = 255;
+             intG = Math.round(255 * ((maxVal - actual) / (maxVal - midVal)));
+        }
+        else{
+            intG = 255;
+            intR = Math.round(255 * ((actual - minVal) / (midVal - minVal)));
+        }
+
+        return rgbToHex(intR, intG, intB);
+    }
+    
     google.maps.event.addListener(drawingManager, 'markercomplete', function(marker){
-        console.log("created a marker!");
-        markers.push(marker);
-        console.log(marker);
+        console.log("I AM DROPPED");
+    
         if (markers[0] && markers[1]){
             m1 = markers[0].getPosition();
-            m2 = markers[markers.length-1].getPosition();
-            dist = _calculatedistance(m1.lat(), m2.lat(), m1.lng(), m2.lng());
-            console.log("distance is " + dist); 
+            m2 = markers[1].getPosition();
+            m3 = marker.getPosition();
+    
+            dist = _calculatecrosstrack(m1.lat(), m2.lat(), m1.lng(), m2.lng(), m3.lat(), m3.lng());
+             console.log("DISTANCE is " + dist); 
+            marker.setIcon({path: google.maps.SymbolPath.CIRCLE,   strokeColor: getColourTemp(0.05, 0.0, dist) ,
+            scale: 5});
+           
         }
-       
-        /*if (polys[0]){
+        
+        markers.push(marker);
+    
+        if (polys[0]){
              calculateshortestpath();
         }else{
             console.log("no calculation!");
-        }*/
+        }
     });
 
     google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon){
@@ -86,18 +169,19 @@
         polygon.setEditable(true);
         
         if (markers[0]){
-            calculateshortestpath();
+            console.log("Shortest distance is " + calculateshortestpath());
         }else{
             console.log("no calculation!");
         }
     });
     
     function calculateshortestpath(){
-        console.log("CALCULATING!!");
-        markers[0].setIcon({path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW});
+       
+        
         
         var polygonBounds = polys[0].getPath();
         var firstcoord;
+        var min  = Number.MAX_VALUE;
         
         polygonBounds.forEach(function(xy, i){
             
@@ -105,28 +189,31 @@
                 firstcoord = xy;
             }
             if (i > 0){
-                console.log(xy.lat() + " " + xy.lng());
                 mpos = markers[0].getPosition();
-                console.log("from " + (i-1) + " to " + i);
                 ct = _calculatecrosstrack(lastcoord.lat(), xy.lat(), lastcoord.lng(), xy.lng(), mpos.lat(), mpos.lng());
-                console.log(ct);
+                min = Math.min(min, ct);
             }
             lastcoord = xy;
         });
          //do the last calculation here;
-         console.log("from last to first");
+        
          ct = _calculatecrosstrack(lastcoord.lat(), firstcoord.lat(), lastcoord.lng(), firstcoord.lng(), mpos.lat(), mpos.lng());
-        console.log(ct);
+         min = Math.min(min, ct);
+         return min;
     }
     
     function _calculatecrosstrack(lat1, lat2, lng1, lng2, lat3, lng3){
-        d13 = _calculatedistance(lat1, lat3, lng1, lng3);
-        o13  = _calculatebearing(lat1, lat3, lng1, lng3);
-        o12  = _calculatebearing(lat1, lat2, lng1, lng2);
-        R = 6371;
-        dxt = Math.asin(Math.sin(d13/R) * Math.sin(o13-o12)) * R;
-       
-        return dxt;
+    
+        if ( (lng3 <= lng1 && lng3 >= lng2)  || (lng3 >= lng1 && lng3 <= lng2) 
+        || (lat3 <= lat1 && lat3 >= lat2)  || (lat3 >= lat1 && lat3 <= lat2)){
+            d13 = _calculatedistance(lat1, lat3, lng1, lng3);
+            o13  = _calculatebearing(lat1, lat3, lng1, lng3);
+            o12  = _calculatebearing(lat1, lat2, lng1, lng2);
+            R = 6371;
+            dxt = Math.asin(Math.sin(d13/R) * Math.sin(radians(o13-o12))) * R;        
+            return Math.abs(dxt);
+        }
+        return  Math.min(_calculatedistance(lat1, lat3, lng1, lng3), _calculatedistance(lat2, lat3, lng2, lng3));  
     }
     
     function radians(d){
@@ -156,49 +243,14 @@
         lat2 = radians(lat2);
         y = Math.sin(dLon) * Math.cos(lat2);
         x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-        //brng = degrees(Math.atan2(y,x));
         brng = Math.atan2(y,x);
-        return brng;
+        return (degrees(brng)+360) % 360;
     }
     
     drawingManager.setMap(map);
+    
+     
 }
-
-   /* poly = new google.maps.Polygon({
-      strokeWeight: 3,
-      fillColor: '#5555FF'
-    });
-    poly.setMap(map);
-    poly.setPaths(new google.maps.MVCArray([path]));
-
-    google.maps.event.addListener(map, 'click', addPoint);
-  }
-
-  function addPoint(event) {
-    path.insertAt(path.length, event.latLng);
-
-    var marker = new google.maps.Marker({
-      position: event.latLng,
-      map: map,
-      draggable: true
-    });
-    markers.push(marker);
-    marker.setTitle("#" + path.length);
-
-    google.maps.event.addListener(marker, 'click', function() {
-      marker.setMap(null);
-      for (var i = 0, I = markers.length; i < I && markers[i] != marker; ++i);
-      markers.splice(i, 1);
-      path.removeAt(i);
-      }
-    );
-
-    google.maps.event.addListener(marker, 'dragend', function() {
-      for (var i = 0, I = markers.length; i < I && markers[i] != marker; ++i);
-      path.setAt(i, marker.getPosition());
-      }
-    );
-  }*/
 </script>
 
 
@@ -206,13 +258,8 @@
 
 </head>
 <body style="margin:0px; padding:0px;" onload="initialize()">
-  <p>Instructions:
-  <ul>
-    <li>Click on the map to insert a vertex.</li>
-    <li>Click on a vertex to remove it.</li>
-    <li>Drag a vertex to move it.</li>
-  </ul>
-  </p>
-  <div id="map" style="width: 980; height: 500;"></div>
+  <div id="mapcanvas" style="width: 980; height: 500;"></div>
+  <label id="lblCurrentPos" />
+  <label id="markerDistance" />
 </body>
 </html>
